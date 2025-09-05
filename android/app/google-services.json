@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "770231454772",
+    "project_id": "fire-fa173",
+    "storage_bucket": "fire-fa173.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:770231454772:android:6e7cca95078d017c164e61",
+        "android_client_info": {
+          "package_name": "com.flit.backend.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDpfZizZWTBiWb-f0qnyCCvRkGfo4cM42w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:770231454772:android:23e21800ca487ba1164e61",
+        "android_client_info": {
+          "package_name": "com.mrdb.flit"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDpfZizZWTBiWb-f0qnyCCvRkGfo4cM42w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
