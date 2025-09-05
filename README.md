@@ -1,16 +1,24 @@
-# flixdb
+# 🎬 MRDb – Movie Research Database  
 
-A new Flutter project.
+MRDb is a movie information app inspired by IMDb. It allows users to search for movies and explore details such as title, rating, cast, release year, genre, and plot. Built with a clean UI and powered by the [TMDb API](https://www.themoviedb.org/).  
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## 🚀 Features  
+- 🔍 Search movies by title  
+- 🎭 View details: title, year, rating, cast, genre, and plot  
+- 🖼 Movie poster display, and also trailer if available.. 
+- ⚡ Fast and responsive design  
+- 🎨 Simple and intuitive UI  
 
-A few resources to get you started if this is your first Flutter project:
+---
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## 🛠️ Tech Stack  
+- **Frontend:** React / Flutter (choose yours)  
+- **API:** TMDb
+- **Styling:** Material UI 
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+---
+
+## 📸 Screenshots  
+*(Add your app screenshots here)*  
