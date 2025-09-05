@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:amicons/amicons.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -24,7 +25,7 @@ YoutubePlayerController? yt;
 bool islod = false;
 Map<String, dynamic> movi={};
 class _MoviePreviewState extends State<MoviePreview> {
-  getMovieDetails() async {
+  Future<void> getMovieDetails() async {
     Uri? url=Uri.parse('https://api.themoviedb.org/3/movie/${widget.movieId}?api_key=38ed19dab876e12b797aaa54db51b633&language=en');
     setState(() {
       islod=true;
@@ -45,8 +46,11 @@ class _MoviePreviewState extends State<MoviePreview> {
         showScaffoldMsg(context, txt: 'Press Back And Try Again...');
       }
     }
-
-
+  }
+  String imgUrl(dynamic path) {
+    if (path == null || path.isEmpty) return 'https://bioapps.com.my/malayamedicalcentre/images/no-image/No-Image-Found-400x264.png';
+    if (path.startsWith('http')) return path;
+    return 'https://image.tmdb.org/t/p/w500$path';
   }
 @override
   void initState() {
@@ -55,7 +59,8 @@ class _MoviePreviewState extends State<MoviePreview> {
   }
   @override
   Widget build(BuildContext context) {
-    final img = 'https://image.tmdb.org/t/p/w500${movi['backdrop_path']??movi['poster_path']??''}';
+
+    final img = imgUrl(movi['backdrop_path']??movi['poster_path']);
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -95,14 +100,20 @@ class _MoviePreviewState extends State<MoviePreview> {
             )
           : Column(
             children: [
-              Container(
+              SizedBox(
                 width: wt*1,
                 height: wt*0.5,
-                decoration: BoxDecoration(
-                    image: DecorationImage(
-                      image: CachedNetworkImageProvider(img),
-                      fit: BoxFit.cover
-                    )
+                child: CachedNetworkImage(
+                  imageUrl: img,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Center(
+                    child: LoadingAnimationWidget.fallingDot(
+                      color: Colors
+                          .green,
+                      size: wt * 0.1,
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => Icon(Amicons.iconly_image_2_fill,size: wt*0.2,color: Colors.white30),
                 ),
               ),
             ],

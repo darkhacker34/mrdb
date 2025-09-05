@@ -1,14 +1,27 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mrdb/firebase_options.dart';
 import 'package:mrdb/home/bottom_nav.dart';
 import 'package:mrdb/home/navs/fav.dart';
+import 'package:mrdb/provider/client.dart';
+import 'package:mrdb/splash.dart';
 import 'package:mrdb/test.dart';
+import 'package:provider/provider.dart';
 
 import 'home/navs/first_page/home_page.dart';
 
 void main() async {
-  runApp(Crud());
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(ChangeNotifierProvider(
+    create: (_) => ClientProvider(),
+      child: Crud()
+  )
+  );
 }
 
 var wt;
@@ -60,7 +73,7 @@ class Crud extends StatelessWidget {
           textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme),
         ),
         debugShowCheckedModeBanner: false,
-        home: Favorite(),
+        home: Splash(),
       ),
     );
   }
