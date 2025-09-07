@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:amicons/amicons.dart';
@@ -10,6 +11,7 @@ import 'package:flutter_rating/flutter_rating.dart';
 import 'package:flutter_rating_stars/flutter_rating_stars.dart';
 import 'package:http/http.dart' as http;
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:lottie/lottie.dart';
 import 'package:mrdb/home/navs/first_page/preview_page.dart';
 import 'package:mrdb/models/keys.dart';
 import 'package:mrdb/models/movie_model.dart';
@@ -26,6 +28,7 @@ class MRDb extends StatefulWidget {
 }
 
 class _MRDbState extends State<MRDb> {
+  bool _showFAB = false;
   List<dynamic> all = [];
   int pageNum = DateTime.now().second;
   bool refresh = false;
@@ -51,7 +54,7 @@ class _MRDbState extends State<MRDb> {
 
     setState(() {
       lod = true;
-      if (pageNum > 2700 && moveTo.hasClients) {
+      if (moveTo.hasClients) {
         moveTo.jumpTo(pixel);
       }
     });
@@ -89,6 +92,7 @@ class _MRDbState extends State<MRDb> {
           if(!mounted) return;
           setState(() {
             lod = false;
+            pixel=0;
             forReFresh = true;
           });
           showScaffoldMsg(context, txt: "ReFresh the page...");
@@ -103,52 +107,85 @@ class _MRDbState extends State<MRDb> {
       await getMovie();
       return;
     }
-
     if (!mounted) return;
-
     setState(() {
       lod = true;
       isSearch = true;
     });
 
-    try {
-      Uri url = Uri.parse(
-        'https://api.themoviedb.org/3/search/movie?api_key=38ed19dab876e12b797aaa54db51b633&query=$query',
-      );
-
-      final res = await http.get(url);
-      if (!mounted) return;
-
-      final data = jsonDecode(res.body);
-
-      setState(() {
-        all = data['results'];
-        search.clear();
-        lod = false;
-        isSearch = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        lod = false;
-        isSearch = false;
-      });
-      print('Error searching movie: $e');
+    int attempt=0;
+    while(attempt<3){
+      try {
+        Uri url = Uri.parse(
+          'https://api.themoviedb.org/3/search/movie?api_key=38ed19dab876e12b797aaa54db51b633&query=$query',
+        );
+        final res = await http.get(url);
+        if (!mounted) return;
+        final data = jsonDecode(res.body);
+        setState(() {
+          if(moveTo.hasClients) {
+            moveTo.jumpTo(0);
+          }
+          all = data['results'];
+          search.clear();
+          showSearch=false;
+          lod = false;
+          isSearch = false;
+        });
+        print(all);
+        return;
+      } catch (e) {
+        if (!mounted) return;
+        attempt++;
+        if(attempt<3){
+          await Future.delayed(Duration(seconds: 2));
+        }else{
+          print('Error searching movie: $e');
+          setState(() {
+            lod = false;
+            isSearch = false;
+          });
+        }
+      }
     }
+
   }
 
   Future<void> getLiked() async {
-    var doc = await FirebaseFirestore.instance
-        .collection(Keys.phone)
-        .doc(deviceId).collection('liked')
-        .get();
-    var data = doc.docs;
-    List likes = data;
     setState(() {
-      likList = likes.map((e) => e['id']).toList();
+      lod = true;
     });
-  }
+    int attempts = 0;
+    bool success = false;
 
+    while(!success&& attempts < 3) {
+      try {
+        var doc = await FirebaseFirestore.instance
+            .collection(Keys.phone)
+            .doc(deviceId).collection('liked')
+            .get();
+        var data = doc.docs;
+        List likes = data;
+        setState(() {
+          likList = likes.map((e) => e['id']).toList();
+          lod = false;
+          success = true;
+        });
+      } catch (e) {
+        attempts++;
+        if (attempts < 3) {
+          await Future.delayed(const Duration(seconds: 1));
+        } else {
+          if (!mounted) return;
+          setState(() {
+            forReFresh = true;
+            lod = false;
+          });
+          showScaffoldMsg(context, txt: "ReFresh the page...");
+        }
+      }
+    }
+  }
   Future<void> addFav({
     required int movieId,
     required String title,
@@ -156,35 +193,50 @@ class _MRDbState extends State<MRDb> {
     required String year,
     required double rating,
   }) async {
-
     Movie movie = Movie(
       movId: movieId,
       title: title,
       img: image,
       year: year,
       rating: rating,
-      timeStamp: DateTime.now().toString()
+      timeStamp: DateTime.now(),
     );
-
-    if(!likList.contains(movieId)){
+    if(likList.contains(movieId)){
+      showScaffoldMsg(context, txt: 'Go To Favorite Page to Remove!!');
+    }
+    int attempt = 0;
+    while (!likList.contains(movieId) && attempt < 3) {
       setState(() {
         isLiking.add(movieId);
       });
-      likList.add(movieId);
-      await FirebaseFirestore.instance
-          .collection(Keys.phone)
-          .doc(deviceId)
-          .collection('liked')
-          .doc(movie.movId.toString())
-          .set(movie.toMap());
+      try {
+        await FirebaseFirestore.instance
+            .collection(Keys.phone)
+            .doc(deviceId)
+            .collection('liked')
+            .doc(movie.movId.toString())
+            .set(movie.toMap());
 
-      setState(() {
-        isLiking.remove(movieId);
-      });
-    }else{
-      return showScaffoldMsg(context, txt: 'Go To Favorite Page To Remove');
+        setState(() {
+          likList.add(movieId);
+          isLiking.remove(movieId);
+        });
+
+        if(mounted)showScaffoldMsg(context, txt: '"$title" added to favorites ✅');
+        return;
+
+      } catch (e) {
+        attempt++;
+        if (attempt < 3) {
+          await Future.delayed(const Duration(seconds: 1));
+        } else {
+          setState(() {
+            isLiking.remove(movieId);
+          });
+          showScaffoldMsg(context, txt: 'Tried 3 times... please try again ❌');
+        }
+      }
     }
-
   }
 
   @override
@@ -197,7 +249,7 @@ class _MRDbState extends State<MRDb> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: pixel > 1000
+      floatingActionButton: _showFAB
           ? InkWell(
               onTap: () {
                 moveTo.animateTo(
@@ -206,11 +258,14 @@ class _MRDbState extends State<MRDb> {
                   curve: Curves.fastEaseInToSlowEaseOut,
                 );
               },
-              child: CircleAvatar(
-                backgroundColor: Colors.white70,
-                radius: wt * 0.06,
-                child: Center(
-                  child: Icon(Icons.arrow_upward, color: Colors.black),
+              child: Padding(
+                padding: EdgeInsets.all(wt*0.04),
+                child: CircleAvatar(
+                  backgroundColor: Colors.white70,
+                  radius: wt * 0.06,
+                  child: Center(
+                    child: Icon(Icons.arrow_upward, color: Colors.black),
+                  ),
                 ),
               ),
             )
@@ -311,9 +366,10 @@ class _MRDbState extends State<MRDb> {
                                         wt * 1,
                                       ),
                                       onTap: () {
+
                                         searchMovie(search.text);
-                                        FocusManager.instance.primaryFocus!
-                                            .unfocus();
+
+                                        FocusManager.instance.primaryFocus!.unfocus();
                                       },
                                       child: Icon(
                                         Icons.search,
@@ -340,21 +396,27 @@ class _MRDbState extends State<MRDb> {
                     NotificationListener(
                       onNotification: (ScrollNotification notification) {
                         pixel = notification.metrics.pixels;
-                        setState(() {});
-                        if (pixel > (pageNum * 2700 - 500)) {
+                        final shouldShowFAB = pixel > 1000;
+                        if (shouldShowFAB != _showFAB) {
+                          setState(() {
+                            _showFAB = shouldShowFAB;
+                          });
+                        }
+
+                        if (pixel >= notification.metrics.maxScrollExtent - 100 &&
+                            !lod && !isSearch) {
                           pageNum++;
                           getMovie();
                         }
                         return true;
                       },
                       child: SizedBox(
-                        height: wt * 1.6,
-                        child: RefreshIndicator(
-                          onRefresh: () => getMovie(refresh: true),
-
-                          child: Stack(
-                            children: [
-                              GridView.builder(
+                        height: ht*0.74,
+                        child: Stack(
+                          children: [
+                            RefreshIndicator(
+                              onRefresh: () => getMovie(refresh: true),
+                              child: all.isNotEmpty?GridView.builder(
                                 controller: moveTo,
                                 itemCount: all.length,
                                 gridDelegate:
@@ -365,6 +427,7 @@ class _MRDbState extends State<MRDb> {
                                       mainAxisExtent: wt * 0.9,
                                     ),
                                 itemBuilder: (context, index) {
+
                                   final currentItem = all[index];
                                   return GestureDetector(
                                     onTap: () {
@@ -553,8 +616,7 @@ class _MRDbState extends State<MRDb> {
                                                   ),
                                                   child: Center(
                                                     child: Text(
-                                                      ('${(all[index]['vote_average'] / 2).toString().split('.').first}.${(all[index]['vote_average'] / 2).toString().split('.').last[0]}/5.0')
-                                                          .toString(),
+                                                      ('${(all[index]['vote_average'] / 2).toStringAsFixed(1).toString()}/5.0'),
                                                       style: TextStyle(
                                                         color: Colors.white38,
                                                         fontWeight:
@@ -579,36 +641,28 @@ class _MRDbState extends State<MRDb> {
                                     ),
                                   );
                                 },
-                              ),
-                              if (lod)
-                                Align(
-                                  alignment: Alignment.center,
-                                  child: Container(
-                                    width: wt,
-                                    height: wt * 0.15,
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          Colors.transparent,
-                                          Colors.black.withOpacity(0.28),
-                                          Colors.black.withOpacity(0.7),
-                                        ],
-                                        stops: [0.0, 0.4, 1.0],
-                                        begin: Alignment.topCenter,
-                                        end: Alignment.bottomCenter,
-                                      ),
-                                    ),
-                                    child: Center(
-                                      child:
-                                          LoadingAnimationWidget.progressiveDots(
-                                            color: Colors.white70,
-                                            size: wt * 0.1,
-                                          ),
+                              ):GestureDetector(
+                                  onTap: () async {
+                                    await getMovie();
+                                  },
+                                  child: LottieBuilder.asset('assets/lottie/not_found.json')),
+                            ),
+                            if (all.isNotEmpty&&lod)
+                              Align(
+                                alignment: Alignment.bottomCenter,
+                                child: SizedBox(
+                                  width: wt,
+                                  height: wt * 0.26,
+                                  child: Center(
+                                    child:
+                                    LoadingAnimationWidget.progressiveDots(
+                                      color: Colors.green,
+                                      size: wt * 0.1,
                                     ),
                                   ),
                                 ),
-                            ],
-                          ),
+                              )
+                          ],
                         ),
                       ),
                     ),

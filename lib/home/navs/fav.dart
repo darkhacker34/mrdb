@@ -26,23 +26,41 @@ class _FavoriteState extends State<Favorite> {
 
   Future<void> getLiked() async {
     clientId = Provider.of<ClientProvider>(context, listen: false).clientId!;
-    var client = await FirebaseFirestore.instance.collection(Keys.phone).doc(clientId).collection('liked').orderBy('timeStamp',descending: true).get();
-    var data = client.docs;
+    var client = FirebaseFirestore.instance.collection(Keys.phone).doc(clientId);
+    var liks = await client.collection('liked').orderBy('timeStamp',descending: true).get();
     setState(() {
-      favorites= data;
+      favorites= liks.docs;
     });
   }
-  Future<void> removeFav({required String id}) async {
+  Future<void> removeFav({required String id, required String title }) async {
     setState(() {
       isDeleting.add(id);
     });
-    await FirebaseFirestore.instance.collection(Keys.phone).doc(clientId).collection('liked').doc(id).delete().then((value) async {
-      await getLiked();
-      setState(() {
-        isDeleting.remove(id);
-      });
-    },);
+    int attempt=0;
+    while(attempt<3){
+      try{
+        await FirebaseFirestore.instance.collection(Keys.phone).doc(clientId).collection('liked').doc(id).delete();
+          await getLiked();
+          setState(() {
+            isDeleting.remove(id);
+          });
+        if(mounted)showScaffoldMsg(context, txt: '"$title" removed from Favorites!');
+        return;
+      }catch(e){
+        attempt++;
+          if(attempt<3){
+            await Future.delayed(Duration(seconds: 2));
+          }else{
+            if(mounted)showScaffoldMsg(context, txt: 'try Again...');
+            setState(() {
+              isDeleting.remove(id);
+            });
+          }
 
+
+      }
+
+    }
   }
   @override
   void initState() {
@@ -122,7 +140,7 @@ class _FavoriteState extends State<Favorite> {
                             ),
                             child: isDeleting.contains(favorites[index]['id'].toString())?LoadingAnimationWidget.fallingDot(color: Colors.grey, size: wt*0.08):IconButton(
                                 onPressed: () {
-                                  removeFav(id: favorites[index]['id'].toString());
+                                  removeFav(id: favorites[index]['id'].toString(),title: favorites[index]['title']);
                                 },
                                 icon: Icon(Amicons.iconly_delete,color: Colors.black,size: wt*0.07,))
                         ),
@@ -159,6 +177,7 @@ class _FavoriteState extends State<Favorite> {
                             child: Row(
                               children: [
                                 Expanded(
+                                  flex: 2,
                                   child: Container(
                                     padding: EdgeInsets.symmetric(
                                       horizontal: wt * 0.02,
@@ -173,6 +192,7 @@ class _FavoriteState extends State<Favorite> {
                                       ),
                                     ),
                                     child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                       children: [
                                         Icon(
                                           Amicons.vuesax_star_1,
@@ -181,7 +201,7 @@ class _FavoriteState extends State<Favorite> {
                                         ),
                                         SizedBox(width: wt * 0.01),
                                         Text(
-                                          (favorites[index]['rating']/2).toString(),
+                                          (favorites[index]['rating']/2).toStringAsFixed(1).toString(),
                                           style: TextStyle(
                                             color: Colors.yellow,
                                             fontWeight: FontWeight.bold,
@@ -195,6 +215,7 @@ class _FavoriteState extends State<Favorite> {
                                 ),
                                 SizedBox(width: wt * 0.02),
                                 Flexible(
+                                  flex: 4,
                                   child: Container(
                                     padding: EdgeInsets.symmetric(horizontal: wt * 0.02, vertical: wt * 0.01),
                                     decoration: BoxDecoration(

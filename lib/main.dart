@@ -7,7 +7,6 @@ import 'package:mrdb/home/bottom_nav.dart';
 import 'package:mrdb/home/navs/fav.dart';
 import 'package:mrdb/provider/client.dart';
 import 'package:mrdb/splash.dart';
-import 'package:mrdb/test.dart';
 import 'package:provider/provider.dart';
 
 import 'home/navs/first_page/home_page.dart';
@@ -26,9 +25,10 @@ void main() async {
 
 var wt;
 var ht;
-showScaffoldMsg(context, {required String txt}) {
+void showScaffoldMsg(context, {required String txt}) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
+      duration: Duration(seconds: 1),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadiusGeometry.circular(wt*0.1)
       ),
@@ -67,7 +67,7 @@ class Crud extends StatelessWidget {
           ),
           appBarTheme: AppBarTheme(
             color: Colors.white,
-            surfaceTintColor: Colors.white,
+            surfaceTintColor: Colors.black,
           ),
           scaffoldBackgroundColor: Colors.white,
           textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme),
