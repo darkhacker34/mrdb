@@ -14,7 +14,7 @@ MRDb is a movie information app inspired by IMDb. It allows users to search for 
 ---
 
 ## 🛠️ Tech Stack  
-- **Frontend:** React / Flutter (choose yours)  
+- **Frontend:** Flutter  
 - **API:** TMDb
 - **Styling:** Material UI 
 
