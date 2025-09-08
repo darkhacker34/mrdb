@@ -413,6 +413,7 @@ class _MoviePreviewState extends State<MoviePreview> {
               ),
               SizedBox(
                 height: ht*0.1,
+
                 child: Center(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
