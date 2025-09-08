@@ -6,7 +6,7 @@ import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:lottie/lottie.dart';
 import 'package:mrdb/home/bottom_nav.dart';
 import 'package:mrdb/home/navs/first_page/preview_page.dart';
-import 'package:mrdb/models/keys.dart';
+import 'package:mrdb/constens/keys.dart';
 import 'package:mrdb/models/movie_model.dart';
 import 'package:mrdb/provider/client.dart';
 import 'package:provider/provider.dart';
@@ -26,7 +26,7 @@ class _FavoriteState extends State<Favorite> {
 
   Future<void> getLiked() async {
     clientId = Provider.of<ClientProvider>(context, listen: false).clientId!;
-    var client = FirebaseFirestore.instance.collection(Keys.phone).doc(clientId);
+    var client = FirebaseFirestore.instance.collection(AppConstants.phone).doc(clientId);
     var liks = await client.collection('liked').orderBy('timeStamp',descending: true).get();
     setState(() {
       favorites= liks.docs;
@@ -39,7 +39,7 @@ class _FavoriteState extends State<Favorite> {
     int attempt=0;
     while(attempt<3){
       try{
-        await FirebaseFirestore.instance.collection(Keys.phone).doc(clientId).collection('liked').doc(id).delete();
+        await FirebaseFirestore.instance.collection(AppConstants.phone).doc(clientId).collection('liked').doc(id).delete();
           await getLiked();
           setState(() {
             isDeleting.remove(id);
@@ -56,8 +56,6 @@ class _FavoriteState extends State<Favorite> {
               isDeleting.remove(id);
             });
           }
-
-
       }
 
     }
@@ -72,10 +70,6 @@ class _FavoriteState extends State<Favorite> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        leading: Icon(
-          Amicons.vuesax_document_favorite_fill,
-          color: Colors.white,
-        ),
         backgroundColor: Colors.black,
         title: Text('Favorites'),
         titleTextStyle: TextStyle(
@@ -84,6 +78,22 @@ class _FavoriteState extends State<Favorite> {
           fontSize: wt * 0.06,
         ),
         centerTitle: true,
+        actions: [
+          Padding(
+            padding: EdgeInsets.only(
+              right: wt*0.05
+            ),
+            child: CircleAvatar(
+              radius: wt*0.06,
+              backgroundColor: Colors.grey.withOpacity(0.5),
+              child: Text(favorites.length.toString(),style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: wt*0.04,
+                color: Colors.white
+              ),),
+            ),
+          )
+        ],
       ),
       body: favorites.isNotEmpty?RefreshIndicator(
         onRefresh: () async {
@@ -97,8 +107,8 @@ class _FavoriteState extends State<Favorite> {
           itemBuilder: (context, index) {
             return Container(
               margin: EdgeInsets.symmetric(
-                horizontal: wt * 0.04,
-                vertical: wt * 0.02,
+                horizontal: wt * 0.05,
+                vertical: ht*0.015,
               ),
               width: wt * 1,
               height: wt * 0.5,

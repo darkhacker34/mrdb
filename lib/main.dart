@@ -1,10 +1,10 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:mrdb/firebase_options.dart';
 import 'package:mrdb/home/bottom_nav.dart';
 import 'package:mrdb/home/navs/fav.dart';
+import 'package:mrdb/home/navs/first_page/preview_page.dart';
 import 'package:mrdb/provider/client.dart';
 import 'package:mrdb/splash.dart';
 import 'package:provider/provider.dart';
@@ -70,7 +70,6 @@ class Crud extends StatelessWidget {
             surfaceTintColor: Colors.black,
           ),
           scaffoldBackgroundColor: Colors.white,
-          textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme),
         ),
         debugShowCheckedModeBanner: false,
         home: Splash(),

@@ -2,7 +2,6 @@
 import 'dart:io';
 
 import 'package:amicons/amicons.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -13,7 +12,7 @@ import 'package:mrdb/home/navs/first_page/home_page.dart';
 import 'package:provider/provider.dart';
 
 import '../main.dart';
-import '../models/keys.dart';
+import '../constens/keys.dart';
 import '../provider/client.dart';
 
 class MainScreen extends StatefulWidget {

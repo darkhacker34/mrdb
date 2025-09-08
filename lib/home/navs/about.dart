@@ -19,17 +19,18 @@ class About extends StatefulWidget {
 class _AboutState extends State<About> {
   bool isLoding=true;
   List device=[];
+  List reDirecting=[];
   Future<void> getPhoneDetails() async {
    try{
      SharedPreferences preferences = await SharedPreferences.getInstance();
      List<String>? phoneData = preferences.getStringList('phone');
      setState(() {
-       device = phoneData??['Unknown', 'Android', 'Unknown Model', 'Unknown ID'];
+       device = phoneData??['Unknown', 'Unknown Model', 'Unknown Version', 'Unknown ID'];
        isLoding=false;
      });
    }catch(e){
      setState(() {
-       device = ['Unknown', 'Android', 'Unknown Model', 'Unknown ID'];
+       device = ['Unknown', 'Unknown Model', 'Unknown Version', 'Unknown ID'];
        isLoding = false;
      });
    }
@@ -88,18 +89,21 @@ class _AboutState extends State<About> {
         InfoModel(
             icon: Amicons.lucide_mail,
             centreTxt: 'Contact Mail',
+            lastTxt: 'Redirecting to Mail Box...',
             subTxt: 'nihalthoppil16@gmail.com',
             onTap: 'nihalthoppil16@gmail.com'
         ),
         InfoModel(
             icon: Amicons.lucide_instagram,
             centreTxt: 'Instagram',
+            lastTxt: 'Redirecting to Instagram...',
             subTxt: 'nihh____al',
             onTap: 'https://www.instagram.com/nihh____al'
         ),
         InfoModel(
             icon: Amicons.remix_whatsapp,
             centreTxt: 'WhatsApp',
+            lastTxt: 'Redirecting to WhatsApp...',
             subTxt: '+91 9605945341',
             onTap: 'https://wa.me/919605945341'
         ),
@@ -114,15 +118,18 @@ class _AboutState extends State<About> {
           icon: Amicons.vuesax_device_message,
           centreTxt: 'Brand',
           lastTxt: device[0].toString().toUpperCase(),
-        ),InfoModel(
+        ),
+        InfoModel(
           icon: Amicons.remix_android,
-          centreTxt: device[1],
-          lastTxt: '13'
-      ),InfoModel(
-          icon: Amicons.flaticon_apps_sharp,
           centreTxt: 'Model',
+          lastTxt: device[1]
+      ),
+        InfoModel(
+          icon: Amicons.flaticon_apps_sharp,
+          centreTxt: 'Android Version',
           lastTxt:  device[2]
-      ),InfoModel(
+      ),
+        InfoModel(
           icon: Amicons.iconly_danger_circle,
           centreTxt: 'Device Id',
           lastTxt:  device[3]
@@ -150,10 +157,10 @@ class _AboutState extends State<About> {
           child: SingleChildScrollView(
             child: isLoding?LoadingAnimationWidget.threeArchedCircle(color: Colors.green, size: wt*0.2):SizedBox(
               width: wt * 1,
-              height: wt * 4.1,
+              height: wt * 4.2,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Container(
@@ -451,11 +458,20 @@ class _AboutState extends State<About> {
                                           splashColor: Colors.green.withOpacity(0.1),
                                           highlightColor: Colors.green.withOpacity(0.1),
                                             borderRadius: BorderRadius.circular(wt*0.02),
-                                          onTap: () {
-                                            nav(url: data.onTap.toString());
+                                          onTap: () async {
+                                            setState(() {
+                                              reDirecting.add(index);
+                                              showScaffoldMsg(context, txt: data.lastTxt.toString());
+                                            });
+                                            await Future.delayed(Duration(seconds: 2));
+                                            await nav(url: data.onTap.toString());
+                                            setState(() {
+                                              reDirecting.remove(index);
+                                            });
                                           },
                                           child: ListTile(
-                                            trailing: Icon(Amicons.vuesax_arrow_right,size: wt*0.08,color: Colors.teal,),
+                                            trailing: reDirecting.contains(index)?LoadingAnimationWidget.dotsTriangle(color: Colors.teal, size: wt*0.05):Icon(Amicons.vuesax_arrow_right,size: wt*0.08,color: Colors.teal,),
+                                            titleAlignment: ListTileTitleAlignment.center,
                                             title: Text(data.centreTxt,style: TextStyle(
                                               color: Colors.tealAccent,
                                               fontWeight: FontWeight.bold
@@ -477,6 +493,7 @@ class _AboutState extends State<About> {
                       ),
                     ),
                   ),
+                  SizedBox(height: ht*0.01,)
                 ],
               ),
             ),

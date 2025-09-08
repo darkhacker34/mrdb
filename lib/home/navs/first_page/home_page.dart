@@ -8,16 +8,16 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rating/flutter_rating.dart';
-import 'package:flutter_rating_stars/flutter_rating_stars.dart';
 import 'package:http/http.dart' as http;
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:lottie/lottie.dart';
 import 'package:mrdb/home/navs/first_page/preview_page.dart';
-import 'package:mrdb/models/keys.dart';
+import 'package:mrdb/constens/keys.dart';
 import 'package:mrdb/models/movie_model.dart';
 import 'package:provider/provider.dart';
 import '../../../main.dart';
 import '../../../provider/client.dart';
+import '../../../splash.dart';
 
 class MRDb extends StatefulWidget {
   final String lang;
@@ -29,11 +29,11 @@ class MRDb extends StatefulWidget {
 
 class _MRDbState extends State<MRDb> {
   bool _showFAB = false;
-  List<dynamic> all = [];
   int pageNum = DateTime.now().second;
   bool refresh = false;
   List likList = [];
   bool lod = false;
+  bool bottomLod = false;
   List isLiking = [];
   bool forReFresh = false;
   double pixel = 0;
@@ -42,7 +42,8 @@ class _MRDbState extends State<MRDb> {
   TextEditingController search = TextEditingController();
   ScrollController moveTo = ScrollController();
   String deviceId = '';
-  Future<void> getMovie({bool refresh = false}) async {
+
+  Future<void> getMovie({bool refresh = false,bool loadMore = false,}) async {
     deviceId = Provider.of<ClientProvider>(context, listen: false).clientId!;
     if (refresh) {
       setState(() {
@@ -53,15 +54,14 @@ class _MRDbState extends State<MRDb> {
     }
 
     setState(() {
-      lod = true;
-      if (moveTo.hasClients) {
-        moveTo.jumpTo(pixel);
+      if(loadMore) {
+        bottomLod=true;
       }
     });
 
     Uri url = Uri.parse(
       'https://api.themoviedb.org/3/discover/movie'
-      '?api_key=38ed19dab876e12b797aaa54db51b633'
+      '?api_key=${AppConstants.apiKey}'
       '&with_original_language=${widget.lang}'
       '&sort_by=popularity.desc'
       '&page=$pageNum',
@@ -78,7 +78,8 @@ class _MRDbState extends State<MRDb> {
           final data = jsonDecode(res.body);
           setState(() {
             all.addAll(data['results']);
-            lod = false;
+            bottomLod=false;
+
           });
           success = true;
         } else {
@@ -109,6 +110,7 @@ class _MRDbState extends State<MRDb> {
     }
     if (!mounted) return;
     setState(() {
+      _showFAB=false;
       lod = true;
       isSearch = true;
     });
@@ -117,7 +119,7 @@ class _MRDbState extends State<MRDb> {
     while(attempt<3){
       try {
         Uri url = Uri.parse(
-          'https://api.themoviedb.org/3/search/movie?api_key=38ed19dab876e12b797aaa54db51b633&query=$query',
+          'https://api.themoviedb.org/3/search/movie?api_key=${AppConstants.apiKey}&query=$query',
         );
         final res = await http.get(url);
         if (!mounted) return;
@@ -132,7 +134,6 @@ class _MRDbState extends State<MRDb> {
           lod = false;
           isSearch = false;
         });
-        print(all);
         return;
       } catch (e) {
         if (!mounted) return;
@@ -152,16 +153,17 @@ class _MRDbState extends State<MRDb> {
   }
 
   Future<void> getLiked() async {
+    deviceId = Provider.of<ClientProvider>(context, listen: false).clientId!;
     setState(() {
+      _showFAB=false;
       lod = true;
     });
     int attempts = 0;
-    bool success = false;
 
-    while(!success&& attempts < 3) {
+    while(attempts < 3) {
       try {
         var doc = await FirebaseFirestore.instance
-            .collection(Keys.phone)
+            .collection(AppConstants.phone)
             .doc(deviceId).collection('liked')
             .get();
         var data = doc.docs;
@@ -169,19 +171,18 @@ class _MRDbState extends State<MRDb> {
         setState(() {
           likList = likes.map((e) => e['id']).toList();
           lod = false;
-          success = true;
         });
+        break;
       } catch (e) {
         attempts++;
+        print('dfdik');
         if (attempts < 3) {
           await Future.delayed(const Duration(seconds: 1));
         } else {
-          if (!mounted) return;
           setState(() {
-            forReFresh = true;
             lod = false;
+            forReFresh=true;
           });
-          showScaffoldMsg(context, txt: "ReFresh the page...");
         }
       }
     }
@@ -211,7 +212,7 @@ class _MRDbState extends State<MRDb> {
       });
       try {
         await FirebaseFirestore.instance
-            .collection(Keys.phone)
+            .collection(AppConstants.phone)
             .doc(deviceId)
             .collection('liked')
             .doc(movie.movId.toString())
@@ -241,7 +242,6 @@ class _MRDbState extends State<MRDb> {
 
   @override
   void initState() {
-    getMovie();
     getLiked();
     super.initState();
   }
@@ -403,10 +403,10 @@ class _MRDbState extends State<MRDb> {
                           });
                         }
 
-                        if (pixel >= notification.metrics.maxScrollExtent - 100 &&
-                            !lod && !isSearch) {
+                        if (pixel >= notification.metrics.maxScrollExtent - 100 && !bottomLod && !isSearch) {
                           pageNum++;
-                          getMovie();
+                          bottomLod=true;
+                          getMovie(loadMore: true);
                         }
                         return true;
                       },
@@ -416,7 +416,9 @@ class _MRDbState extends State<MRDb> {
                           children: [
                             RefreshIndicator(
                               onRefresh: () => getMovie(refresh: true),
-                              child: all.isNotEmpty?GridView.builder(
+                              child: lod?Center(
+                                child: LoadingAnimationWidget.inkDrop(color: Colors.green, size: wt*0.1),
+                              ) :all.isNotEmpty?GridView.builder(
                                 controller: moveTo,
                                 itemCount: all.length,
                                 gridDelegate:
@@ -536,7 +538,7 @@ class _MRDbState extends State<MRDb> {
                                                             title:
                                                                 currentItem['title'],
                                                             image:
-                                                                "https://image.tmdb.org/t/p/w500${currentItem['poster_path']}",
+                                                                "${AppConstants.baseImageUrl}${currentItem['poster_path']}",
                                                             year:
                                                                 currentItem['release_date'],
                                                             rating:
@@ -641,13 +643,9 @@ class _MRDbState extends State<MRDb> {
                                     ),
                                   );
                                 },
-                              ):GestureDetector(
-                                  onTap: () async {
-                                    await getMovie();
-                                  },
-                                  child: LottieBuilder.asset('assets/lottie/not_found.json')),
+                              ):LottieBuilder.asset('assets/lottie/not_found.json'),
                             ),
-                            if (all.isNotEmpty&&lod)
+                            if (all.isNotEmpty&&bottomLod)
                               Align(
                                 alignment: Alignment.bottomCenter,
                                 child: SizedBox(
