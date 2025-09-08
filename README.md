@@ -21,6 +21,9 @@ MRDb is a movie information app inspired by IMDb. It allows users to search for 
 ---
 
 ## 📸 Screenshots  
-
-
-<img src="https://raw.githubusercontent.com/darkhacker34/mrdb/master/assets/info.gif" width="300"/>
+<table>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/darkhacker34/mrdb/master/assets/info.gif" width="300"/></td>
+    <td><img src="https://raw.githubusercontent.com/darkhacker34/mrdb/master/assets/preview.gif" width="300"/></td>
+  </tr>
+</table>
