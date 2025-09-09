@@ -80,7 +80,6 @@ class _SplashState extends State<Splash> {
       }
 
   }
-
   Future<void> getMovie({bool refresh = false}) async {
 
     Uri url = Uri.parse(
@@ -130,7 +129,7 @@ class _SplashState extends State<Splash> {
               SizedBox(),
               Container(
                 width: wt*0.45,
-                height: wt*0.45,
+                height: ht*0.2,
                 decoration: BoxDecoration(
                   color: Colors.green.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(wt*0.03),

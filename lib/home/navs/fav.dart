@@ -99,10 +99,11 @@ class _FavoriteState extends State<Favorite> {
         onRefresh: () async {
           await getLiked();
           setState(() {
-            
+
           });
         },
         child: ListView.builder(
+          physics: BouncingScrollPhysics(),
           itemCount: favorites.length,
           itemBuilder: (context, index) {
             return Container(
@@ -111,7 +112,7 @@ class _FavoriteState extends State<Favorite> {
                 vertical: ht*0.015,
               ),
               width: wt * 1,
-              height: wt * 0.5,
+              height: ht * 0.22,
               decoration: BoxDecoration(
                 color: Colors.grey.shade800,
                 borderRadius: BorderRadius.circular(wt * 0.04),
@@ -127,7 +128,7 @@ class _FavoriteState extends State<Favorite> {
                         ),
                         child: SizedBox(
                           width: wt * 0.3,
-                          height: wt * 0.5,
+                          height: ht * 0.22,
                           child: CachedNetworkImage(
                             errorWidget: (context, url, error) => Icon(Amicons.iconly_image_2_fill,size: wt*0.2,color: Colors.white30),
                             imageUrl: favorites[index]['img']??'',
@@ -140,7 +141,7 @@ class _FavoriteState extends State<Favorite> {
                         alignment: AlignmentGeometry.topLeft,
                         child: Container(
                           width: wt*0.15,
-                          height: wt*0.12,
+                          height: ht*0.05,
                             decoration: BoxDecoration(
                               color: isDeleting.contains(favorites[index]['id'].toString())?Colors.black.withOpacity(0.7):Colors.red.shade900.withOpacity(0.8),
                               borderRadius: BorderRadius.only(
@@ -181,7 +182,6 @@ class _FavoriteState extends State<Favorite> {
                               ),
                             ),
                           ),
-                          SizedBox(height: wt * 0.02),
                           Expanded(
                             flex: 2,
                             child: Row(
@@ -260,8 +260,6 @@ class _FavoriteState extends State<Favorite> {
                                Navigator.push(context, MaterialPageRoute(builder: (context) =>  MoviePreview(movieId: favorites[index]['id'],),));
                               },
                               child: Container(
-                                width: double.infinity,
-                                height: wt*0.1,
                                 decoration: BoxDecoration(
                                   color: Colors.yellow.withOpacity(0.1),
                                   border: Border.all(

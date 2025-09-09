@@ -157,15 +157,15 @@ class _AboutState extends State<About> {
           child: SingleChildScrollView(
             child: isLoding?LoadingAnimationWidget.threeArchedCircle(color: Colors.green, size: wt*0.2):SizedBox(
               width: wt * 1,
-              height: wt * 4.2,
+              height: ht * 2.06,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Container(
                     width: wt * 0.9,
-                    height: wt * 0.8,
+                    height: ht * 0.4,
                     decoration: BoxDecoration(
                       color: Colors.pink.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(wt * 0.05),
@@ -215,7 +215,7 @@ class _AboutState extends State<About> {
                   ),
                   Container(
                     width: wt * 0.9,
-                    height: wt * 1,
+                    height: ht * 0.47,
                     decoration: BoxDecoration(
                       color: Colors.green.withOpacity(0.07),
                       borderRadius: BorderRadius.circular(wt * 0.05),
@@ -256,7 +256,7 @@ class _AboutState extends State<About> {
                                   child: Icon(Amicons.lucide_copy,color: Colors.green.shade400,))
                             ],
                           ),
-                          SizedBox(height: wt*0.05,),
+                          SizedBox(height: ht*0.04,),
                           Expanded(
                             child: ListView.builder(
                               itemCount: deviceInfo.length,
@@ -266,7 +266,7 @@ class _AboutState extends State<About> {
                                   children: [
                                     Container(
                                       width: wt*1,
-                                      height: wt*0.15,
+                                      height: ht*0.07,
                                       decoration: BoxDecoration(
                                           color: Colors.green.withOpacity(0.03),
                                           border: Border.all(
@@ -297,7 +297,7 @@ class _AboutState extends State<About> {
                                         ),
                                       ),
                                     ),
-                                    SizedBox(height: wt*0.05,)
+                                    SizedBox(height: ht*0.02,)
                                   ],
                                 );
                               },
@@ -310,7 +310,7 @@ class _AboutState extends State<About> {
                   ),
                   Container(
                     width: wt * 0.9,
-                    height: wt * 1.15,
+                    height: ht * 0.59,
                     decoration: BoxDecoration(
                       color: Colors.orangeAccent.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(wt * 0.05),
@@ -341,7 +341,7 @@ class _AboutState extends State<About> {
                               ),
                             ],
                           ),
-                          SizedBox(height: wt*0.05,),
+                          SizedBox(height: ht*0.045,),
                           Expanded(
                             child: ListView.builder(
                               physics: NeverScrollableScrollPhysics(),
@@ -352,7 +352,7 @@ class _AboutState extends State<About> {
                                     children: [
                                       Container(
                                         width: wt*1,
-                                        height: wt*0.27,
+                                        height: ht*0.14,
                                         decoration: BoxDecoration(
                                             color: Colors.orangeAccent.withOpacity(0.03),
                                             border: Border.all(
@@ -374,7 +374,7 @@ class _AboutState extends State<About> {
                                                     fontSize: wt*0.045
                                                 ),
                                               ),
-                                              SizedBox(height: wt*0.03,),
+                                              SizedBox(height: ht*0.01,),
                                               Text(data.centreTxt,maxLines:1,overflow: TextOverflow.ellipsis, style: TextStyle(
                                                   color: Colors.orangeAccent.withOpacity(0.7),
                                                   fontWeight: FontWeight.bold,
@@ -390,7 +390,7 @@ class _AboutState extends State<About> {
                                           ),
                                         ),
                                       ),
-                                      SizedBox(height: wt*0.04,)
+                                      SizedBox(height: ht*0.02,)
                                     ],
                                   );
                                 },
@@ -403,7 +403,7 @@ class _AboutState extends State<About> {
                   ),
                   Container(
                     width: wt * 0.9,
-                    height: wt * 0.9,
+                    height: ht * 0.45,
                     decoration: BoxDecoration(
                       color: Colors.tealAccent.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(wt * 0.05),
@@ -434,7 +434,7 @@ class _AboutState extends State<About> {
                               ),
                             ],
                           ),
-                          SizedBox(height: wt*0.05,),
+                          SizedBox(height: ht*0.03,),
                           Expanded(
                             child: ListView.builder(
                               physics: NeverScrollableScrollPhysics(),
@@ -445,7 +445,7 @@ class _AboutState extends State<About> {
                                     children: [
                                       Container(
                                         width: wt*1,
-                                        height: wt*0.2,
+                                        height: ht*0.1,
                                         decoration: BoxDecoration(
                                           color: Colors.teal.withOpacity(0.1),
                                           border: Border.all(
@@ -483,7 +483,7 @@ class _AboutState extends State<About> {
                                           ),
                                         ),
                                       ),
-                                      SizedBox(height: wt*0.04,)
+                                      SizedBox(height: ht*0.02,)
                                     ],
                                   );
                                 },
@@ -493,7 +493,6 @@ class _AboutState extends State<About> {
                       ),
                     ),
                   ),
-                  SizedBox(height: ht*0.01,)
                 ],
               ),
             ),

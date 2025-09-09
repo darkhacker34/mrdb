@@ -37,25 +37,30 @@ class _MRDbState extends State<MRDb> {
   List isLiking = [];
   bool forReFresh = false;
   double pixel = 0;
-  bool isSearch = false;
-  bool showSearch = false;
   TextEditingController search = TextEditingController();
   ScrollController moveTo = ScrollController();
   String deviceId = '';
 
-  Future<void> getMovie({bool refresh = false,bool loadMore = false,}) async {
+  Future<void> getMovie({
+    bool refresh = false,
+    bool loadMore = false,
+    bool forRe = false,
+  }) async {
     deviceId = Provider.of<ClientProvider>(context, listen: false).clientId!;
-    if (refresh) {
-      setState(() {
-        all.clear();
+    setState(() {
+      if (forRe) {
+        lod = true;
+        forReFresh = false;
+      }
+
+      if (refresh) {
         forReFresh = false;
         pageNum = DateTime.now().second;
-      });
-    }
+      }
 
-    setState(() {
-      if(loadMore) {
-        bottomLod=true;
+      if (loadMore) {
+        bottomLod = true;
+        lod = false;
       }
     });
 
@@ -68,20 +73,22 @@ class _MRDbState extends State<MRDb> {
     );
 
     int attempts = 0;
-    bool success = false;
 
-    while (!success && attempts < 3) {
+    while (attempts < 3) {
       try {
         final res = await http.get(url);
-
         if (res.statusCode == 200) {
           final data = jsonDecode(res.body);
           setState(() {
-            all.addAll(data['results']);
-            bottomLod=false;
-
+            if (bottomLod) {
+              all.addAll(data['results']);
+            } else {
+              all = data['results'];
+            }
+            bottomLod = false;
+            lod = false;
           });
-          success = true;
+          return;
         } else {
           throw Exception('Failed with status: ${res.statusCode}');
         }
@@ -90,11 +97,13 @@ class _MRDbState extends State<MRDb> {
         if (attempts < 3) {
           await Future.delayed(const Duration(seconds: 1));
         } else {
-          if(!mounted) return;
+          if (!mounted) return;
           setState(() {
             lod = false;
-            pixel=0;
+            pixel = 0;
             forReFresh = true;
+            bottomLod ? _showFAB = true : _showFAB = false;
+            bottomLod = false;
           });
           showScaffoldMsg(context, txt: "ReFresh the page...");
         }
@@ -103,20 +112,19 @@ class _MRDbState extends State<MRDb> {
   }
 
   Future<void> searchMovie(String query) async {
-    if (query.isEmpty) {
-      all.clear();
-      await getMovie();
+    if (query.isEmpty && query == '') {
+      showScaffoldMsg(context, txt: "Search Can't Be Empty");
       return;
     }
+
     if (!mounted) return;
     setState(() {
-      _showFAB=false;
+      _showFAB = false;
       lod = true;
-      isSearch = true;
     });
 
-    int attempt=0;
-    while(attempt<3){
+    int attempt = 0;
+    while (attempt < 3) {
       try {
         Uri url = Uri.parse(
           'https://api.themoviedb.org/3/search/movie?api_key=${AppConstants.apiKey}&query=$query',
@@ -125,46 +133,46 @@ class _MRDbState extends State<MRDb> {
         if (!mounted) return;
         final data = jsonDecode(res.body);
         setState(() {
-          if(moveTo.hasClients) {
+          if (moveTo.hasClients) {
             moveTo.jumpTo(0);
           }
           all = data['results'];
           search.clear();
-          showSearch=false;
           lod = false;
-          isSearch = false;
         });
         return;
       } catch (e) {
         if (!mounted) return;
         attempt++;
-        if(attempt<3){
+        if (attempt < 3) {
           await Future.delayed(Duration(seconds: 2));
-        }else{
-          print('Error searching movie: $e');
+        } else {
+          if (!mounted) return;
           setState(() {
             lod = false;
-            isSearch = false;
+            forReFresh = true;
+            search.clear();
           });
+          showScaffoldMsg(context, txt: 'refresh and try again...');
         }
       }
     }
-
   }
 
   Future<void> getLiked() async {
     deviceId = Provider.of<ClientProvider>(context, listen: false).clientId!;
     setState(() {
-      _showFAB=false;
+      _showFAB = false;
       lod = true;
     });
     int attempts = 0;
 
-    while(attempts < 3) {
+    while (attempts < 3) {
       try {
         var doc = await FirebaseFirestore.instance
             .collection(AppConstants.phone)
-            .doc(deviceId).collection('liked')
+            .doc(deviceId)
+            .collection('liked')
             .get();
         var data = doc.docs;
         List likes = data;
@@ -181,12 +189,13 @@ class _MRDbState extends State<MRDb> {
         } else {
           setState(() {
             lod = false;
-            forReFresh=true;
+            forReFresh = true;
           });
         }
       }
     }
   }
+
   Future<void> addFav({
     required int movieId,
     required String title,
@@ -202,7 +211,7 @@ class _MRDbState extends State<MRDb> {
       rating: rating,
       timeStamp: DateTime.now(),
     );
-    if(likList.contains(movieId)){
+    if (likList.contains(movieId)) {
       showScaffoldMsg(context, txt: 'Go To Favorite Page to Remove!!');
     }
     int attempt = 0;
@@ -223,9 +232,9 @@ class _MRDbState extends State<MRDb> {
           isLiking.remove(movieId);
         });
 
-        if(mounted)showScaffoldMsg(context, txt: '"$title" added to favorites ✅');
+        if (mounted)
+          showScaffoldMsg(context, txt: '"$title" added to favorites ✅');
         return;
-
       } catch (e) {
         attempt++;
         if (attempt < 3) {
@@ -259,7 +268,7 @@ class _MRDbState extends State<MRDb> {
                 );
               },
               child: Padding(
-                padding: EdgeInsets.all(wt*0.04),
+                padding: EdgeInsets.all(wt * 0.04),
                 child: CircleAvatar(
                   backgroundColor: Colors.white70,
                   radius: wt * 0.06,
@@ -293,8 +302,7 @@ class _MRDbState extends State<MRDb> {
           ? Center(
               child: InkWell(
                 borderRadius: BorderRadius.circular(wt * 0.1),
-                onTap: () => getMovie(refresh: true),
-
+                onTap: () => getMovie(forRe: true),
                 child: Container(
                   width: wt * 0.27,
                   height: wt * 0.1,
@@ -323,25 +331,20 @@ class _MRDbState extends State<MRDb> {
               ),
             )
           : Padding(
-              padding: EdgeInsets.all(wt * 0.04),
+              padding: EdgeInsets.only(right: wt * 0.04, left: wt * 0.04),
               child: SingleChildScrollView(
                 physics: NeverScrollableScrollPhysics(),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     TextFormField(
+                      textInputAction: TextInputAction.search,
+                      onFieldSubmitted: (value) {
+                        searchMovie(value);
+                      },
                       controller: search,
                       cursorColor: Colors.white,
-                      cursorHeight: wt * 0.05,
-                      onChanged: (value) {
-                        setState(() {
-                          if (value.isNotEmpty) {
-                            showSearch = true;
-                          } else {
-                            showSearch = false;
-                          }
-                        });
-                      },
+                      cursorHeight: ht * 0.025,
                       style: TextStyle(
                         color: Colors.grey.shade300,
                         fontWeight: FontWeight.w600,
@@ -351,32 +354,7 @@ class _MRDbState extends State<MRDb> {
                         filled: true,
                         hintText: 'Movies, shows, celebrities...',
                         hintStyle: TextStyle(color: Colors.grey),
-                        suffixIcon: showSearch
-                            ? isSearch
-                                  ? Padding(
-                                      padding: EdgeInsets.all(wt * 0.015),
-                                      child:
-                                          LoadingAnimationWidget.dotsTriangle(
-                                            color: Colors.white,
-                                            size: wt * 0.06,
-                                          ),
-                                    )
-                                  : InkWell(
-                                      borderRadius: BorderRadius.circular(
-                                        wt * 1,
-                                      ),
-                                      onTap: () {
 
-                                        searchMovie(search.text);
-
-                                        FocusManager.instance.primaryFocus!.unfocus();
-                                      },
-                                      child: Icon(
-                                        Icons.search,
-                                        color: Colors.white54,
-                                      ),
-                                    )
-                            : null,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(wt * 0.04),
                         ),
@@ -392,7 +370,7 @@ class _MRDbState extends State<MRDb> {
                         ),
                       ),
                     ),
-                    SizedBox(height: wt * 0.03),
+                    SizedBox(height: ht * 0.02),
                     NotificationListener(
                       onNotification: (ScrollNotification notification) {
                         pixel = notification.metrics.pixels;
@@ -403,263 +381,338 @@ class _MRDbState extends State<MRDb> {
                           });
                         }
 
-                        if (pixel >= notification.metrics.maxScrollExtent - 100 && !bottomLod && !isSearch) {
+                        if (pixel >=
+                                notification.metrics.maxScrollExtent - 100 &&
+                            !bottomLod) {
                           pageNum++;
-                          bottomLod=true;
+                          bottomLod = true;
                           getMovie(loadMore: true);
                         }
                         return true;
                       },
                       child: SizedBox(
-                        height: ht*0.74,
+                        height: ht * 0.74,
                         child: Stack(
                           children: [
                             RefreshIndicator(
                               onRefresh: () => getMovie(refresh: true),
-                              child: lod?Center(
-                                child: LoadingAnimationWidget.inkDrop(color: Colors.green, size: wt*0.1),
-                              ) :all.isNotEmpty?GridView.builder(
-                                controller: moveTo,
-                                itemCount: all.length,
-                                gridDelegate:
-                                    SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 2,
-                                      mainAxisSpacing: wt * 0.02,
-                                      crossAxisSpacing: wt * 0.02,
-                                      mainAxisExtent: wt * 0.9,
+                              child: lod
+                                  ? Center(
+                                      child:
+                                          LoadingAnimationWidget.dotsTriangle(
+                                            color: Colors.green,
+                                            size: wt * 0.1,
+                                          ),
+                                    )
+                                  :all.isEmpty? Center(
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(
+                                    wt * 0.1,
+                                  ),
+                                  onTap: () => getMovie(forRe: true),
+                                  child: Container(
+                                    width: wt * 0.27,
+                                    height: wt * 0.1,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade700,
+                                      borderRadius: BorderRadius.circular(
+                                        wt * 0.1,
+                                      ),
                                     ),
-                                itemBuilder: (context, index) {
-
-                                  final currentItem = all[index];
-                                  return GestureDetector(
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => MoviePreview(
-                                            movieId: currentItem['id'],
+                                    child: Row(
+                                      mainAxisAlignment:
+                                      MainAxisAlignment.spaceAround,
+                                      children: [
+                                        Icon(
+                                          Amicons
+                                              .vuesax_refresh_circle_fill,
+                                          size: wt * 0.09,
+                                          color: Colors.white54,
+                                        ),
+                                        Text(
+                                          'Refresh',
+                                          style: TextStyle(
+                                            color: Colors.white70,
+                                            fontWeight: FontWeight.bold,
                                           ),
                                         ),
-                                      );
-                                    },
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.black,
-                                        borderRadius: BorderRadius.circular(
-                                          wt * 0.04,
-                                        ),
-                                        border: Border.all(color: Colors.grey),
-                                      ),
-                                      child: Column(
-                                        children: [
-                                          Expanded(
-                                            flex: 9,
-                                            child: Stack(
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ):GridView.builder(
+                                      controller: moveTo,
+                                      itemCount: all.length,
+                                      physics: BouncingScrollPhysics(),
+                                      gridDelegate:
+                                          SliverGridDelegateWithFixedCrossAxisCount(
+                                            crossAxisCount: 2,
+                                            mainAxisSpacing: ht * 0.02,
+                                            crossAxisSpacing: wt * 0.04,
+                                            mainAxisExtent: wt * 0.9,
+                                          ),
+                                      itemBuilder: (context, index) {
+                                        final currentItem = all[index];
+                                        return GestureDetector(
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    MoviePreview(
+                                                      movieId:
+                                                          currentItem['id'],
+                                                    ),
+                                              ),
+                                            );
+                                          },
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: Colors.black,
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                    wt * 0.04,
+                                                  ),
+                                              border: Border.all(
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                            child: Column(
                                               children: [
-                                                ClipRRect(
-                                                  borderRadius:
-                                                      BorderRadius.only(
-                                                        topLeft:
-                                                            Radius.circular(
-                                                              wt * 0.04,
+                                                Expanded(
+                                                  flex: 9,
+                                                  child: Stack(
+                                                    children: [
+                                                      ClipRRect(
+                                                        borderRadius:
+                                                            BorderRadius.only(
+                                                              topLeft:
+                                                                  Radius.circular(
+                                                                    wt * 0.04,
+                                                                  ),
+                                                              topRight:
+                                                                  Radius.circular(
+                                                                    wt * 0.04,
+                                                                  ),
                                                             ),
-                                                        topRight:
-                                                            Radius.circular(
-                                                              wt * 0.04,
-                                                            ),
-                                                      ),
-                                                  child:
-                                                      all[index]['poster_path'] !=
-                                                          null
-                                                      ? CachedNetworkImage(
-                                                          imageUrl:
-                                                              'https://image.tmdb.org/t/p/w500${all[index]['poster_path']}',
-                                                          width: wt * 0.5,
-                                                          placeholder:
-                                                              (
-                                                                context,
-                                                                url,
-                                                              ) => Center(
-                                                                child: LoadingAnimationWidget.fallingDot(
-                                                                  color: Colors
-                                                                      .green,
-                                                                  size: wt * 0.1,
-                                                                ),
-                                                              ),
-                                                          errorWidget:
-                                                              (
-                                                                context,
-                                                                url,
-                                                                error,
-                                                              ) => Image.asset(
+                                                        child:
+                                                            all[index]['poster_path'] !=
+                                                                null
+                                                            ? CachedNetworkImage(
+                                                                imageUrl:
+                                                                    'https://image.tmdb.org/t/p/w500${all[index]['poster_path']}',
+                                                                width: wt * 0.5,
+                                                                placeholder:
+                                                                    (
+                                                                      context,
+                                                                      url,
+                                                                    ) => Center(
+                                                                      child: LoadingAnimationWidget.fallingDot(
+                                                                        color: Colors
+                                                                            .green,
+                                                                        size:
+                                                                            wt *
+                                                                            0.1,
+                                                                      ),
+                                                                    ),
+                                                                errorWidget:
+                                                                    (
+                                                                      context,
+                                                                      url,
+                                                                      error,
+                                                                    ) => Image.asset(
+                                                                      'assets/images/image_error.png',
+                                                                      color: Colors
+                                                                          .grey,
+                                                                      width:
+                                                                          wt *
+                                                                          0.05,
+                                                                    ),
+                                                                fit: BoxFit
+                                                                    .cover,
+                                                              )
+                                                            : Image.asset(
                                                                 'assets/images/image_error.png',
                                                                 color:
                                                                     Colors.grey,
-                                                                width:
-                                                                    wt * 0.05,
+                                                                width: wt * 0.5,
+                                                                fit: BoxFit
+                                                                    .cover,
                                                               ),
-                                                          fit: BoxFit.cover,
-                                                        )
-                                                      : Image.asset(
-                                                          'assets/images/image_error.png',
-                                                          color: Colors.grey,
-                                                          width: wt * 0.5,
-                                                          fit: BoxFit.cover,
-                                                        ),
-                                                ),
-                                                Align(
-                                                  alignment: Alignment.topRight,
-                                                  child: Padding(
-                                                    padding: EdgeInsets.all(
-                                                      wt * 0.015,
-                                                    ),
-                                                    child: Container(
-                                                      width: wt * 0.1,
-                                                      height: wt * 0.1,
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.black
-                                                            .withOpacity(0.1)
-                                                            .withOpacity(0.6),
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              wt * 0.03,
+                                                      ),
+                                                      Align(
+                                                        alignment:
+                                                            Alignment.topRight,
+                                                        child: Padding(
+                                                          padding:
+                                                              EdgeInsets.all(
+                                                                wt * 0.015,
+                                                              ),
+                                                          child: Container(
+                                                            width: wt * 0.11,
+                                                            height: ht * 0.05,
+                                                            decoration: BoxDecoration(
+                                                              color: Colors
+                                                                  .black
+                                                                  .withOpacity(
+                                                                    0.1,
+                                                                  )
+                                                                  .withOpacity(
+                                                                    0.6,
+                                                                  ),
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    wt * 0.03,
+                                                                  ),
+                                                              border: Border.all(
+                                                                color: Colors
+                                                                    .white
+                                                                    .withOpacity(
+                                                                      0.6,
+                                                                    ),
+                                                                width: 2,
+                                                              ),
                                                             ),
-                                                        border: Border.all(
-                                                          color: Colors.white
-                                                              .withOpacity(0.6),
-                                                          width: 2,
+                                                            child: InkWell(
+                                                              onTap: () async {
+                                                                addFav(
+                                                                  movieId:
+                                                                      currentItem['id'],
+                                                                  title:
+                                                                      currentItem['title'],
+                                                                  image:
+                                                                      "${AppConstants.baseImageUrl}${currentItem['poster_path']}",
+                                                                  year:
+                                                                      currentItem['release_date'],
+                                                                  rating:
+                                                                      currentItem['vote_average'],
+                                                                );
+                                                              },
+                                                              child:
+                                                                  isLiking.contains(
+                                                                    currentItem['id'],
+                                                                  )
+                                                                  ? LoadingAnimationWidget.fallingDot(
+                                                                      color: Colors
+                                                                          .red,
+                                                                      size:
+                                                                          wt *
+                                                                          0.08,
+                                                                    )
+                                                                  : Icon(
+                                                                      likList.contains(
+                                                                            currentItem['id'],
+                                                                          )
+                                                                          ? Amicons.iconly_heart_fill
+                                                                          : Amicons.iconly_heart,
+                                                                      color:
+                                                                          likList.contains(
+                                                                            currentItem['id'],
+                                                                          )
+                                                                          ? Colors.red
+                                                                          : Colors.white,
+                                                                      size:
+                                                                          wt *
+                                                                          0.05,
+                                                                    ),
+                                                            ),
+                                                          ),
                                                         ),
                                                       ),
-                                                      child: InkWell(
-                                                        onTap: () async {
-                                                          addFav(
-                                                            movieId:
-                                                                currentItem['id'],
-                                                            title:
-                                                                currentItem['title'],
-                                                            image:
-                                                                "${AppConstants.baseImageUrl}${currentItem['poster_path']}",
-                                                            year:
-                                                                currentItem['release_date'],
-                                                            rating:
-                                                                currentItem['vote_average'],
-                                                          );
-                                                        },
-                                                        child:
-                                                            isLiking.contains(
-                                                              currentItem['id'],
-                                                            )
-                                                            ? LoadingAnimationWidget.fallingDot(
-                                                                color:
-                                                                    Colors.red,
-                                                                size: wt * 0.08,
-                                                              )
-                                                            : Icon(
-                                                                likList.contains(
-                                                                      currentItem['id'],
-                                                                    )
-                                                                    ? Amicons
-                                                                          .iconly_heart_fill
-                                                                    : Amicons
-                                                                          .iconly_heart,
-                                                                color:
-                                                                    likList.contains(
-                                                                      currentItem['id'],
-                                                                    )
-                                                                    ? Colors.red
-                                                                    : Colors
-                                                                          .white,
-                                                                size: wt * 0.05,
+                                                    ],
+                                                  ),
+                                                ),
+                                                Expanded(
+                                                  flex: 2,
+                                                  child: ListTile(
+                                                    title: Text(
+                                                      all[index]['title']
+                                                          .toString(),
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                    titleTextStyle: TextStyle(
+                                                      color: Colors.white54,
+                                                      fontSize: wt * 0.04,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                    subtitle: Text(
+                                                      'Release: ${all[index]['release_date']}',
+                                                    ),
+                                                    subtitleTextStyle:
+                                                        TextStyle(
+                                                          color: Colors.white38,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: wt * 0.03,
+                                                        ),
+                                                  ),
+                                                ),
+                                                Expanded(
+                                                  flex: 2,
+                                                  child: Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .spaceEvenly,
+                                                    children: [
+                                                      Container(
+                                                        width: wt * 0.14,
+                                                        height: ht * 0.028,
+                                                        decoration: BoxDecoration(
+                                                          color: Colors.white24,
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                wt * 0.04,
                                                               ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          Expanded(
-                                            flex: 2,
-                                            child: ListTile(
-                                              title: Text(
-                                                all[index]['title'].toString(),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                              titleTextStyle: TextStyle(
-                                                color: Colors.white54,
-                                                fontSize: wt * 0.04,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                              subtitle: Text(
-                                                'Release: ${all[index]['release_date']}',
-                                              ),
-                                              subtitleTextStyle: TextStyle(
-                                                color: Colors.white38,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: wt * 0.03,
-                                              ),
-                                            ),
-                                          ),
-                                          Expanded(
-                                            flex: 2,
-                                            child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.spaceEvenly,
-                                              children: [
-                                                Container(
-                                                  width: wt * 0.14,
-                                                  height: wt * 0.05,
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.white24,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          wt * 0.04,
                                                         ),
-                                                  ),
-                                                  child: Center(
-                                                    child: Text(
-                                                      ('${(all[index]['vote_average'] / 2).toStringAsFixed(1).toString()}/5.0'),
-                                                      style: TextStyle(
-                                                        color: Colors.white38,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        fontSize: wt * 0.03,
+                                                        child: Center(
+                                                          child: Text(
+                                                            ('${(all[index]['vote_average'] / 2).toStringAsFixed(1).toString()}/5.0'),
+                                                            style: TextStyle(
+                                                              color: Colors
+                                                                  .white38,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                              fontSize:
+                                                                  wt * 0.03,
+                                                            ),
+                                                          ),
+                                                        ),
                                                       ),
-                                                    ),
+                                                      StarRating(
+                                                        starCount: 5,
+                                                        size: wt * 0.04,
+                                                        rating:
+                                                            (all[index]['vote_average'] /
+                                                            2),
+                                                      ),
+                                                    ],
                                                   ),
-                                                ),
-                                                StarRating(
-                                                  starCount: 5,
-                                                  size: wt * 0.04,
-                                                  rating:
-                                                      (all[index]['vote_average'] /
-                                                      2),
                                                 ),
                                               ],
                                             ),
                                           ),
-                                        ],
-                                      ),
+                                        );
+                                      },
                                     ),
-                                  );
-                                },
-                              ):LottieBuilder.asset('assets/lottie/not_found.json'),
                             ),
-                            if (all.isNotEmpty&&bottomLod)
+                            if (all.isNotEmpty && bottomLod)
                               Align(
                                 alignment: Alignment.bottomCenter,
                                 child: SizedBox(
                                   width: wt,
-                                  height: wt * 0.26,
+                                  height: ht * 0.13,
                                   child: Center(
                                     child:
-                                    LoadingAnimationWidget.progressiveDots(
-                                      color: Colors.green,
-                                      size: wt * 0.1,
-                                    ),
+                                        LoadingAnimationWidget.progressiveDots(
+                                          color: Colors.green,
+                                          size: wt * 0.1,
+                                        ),
                                   ),
                                 ),
-                              )
+                              ),
                           ],
                         ),
                       ),
