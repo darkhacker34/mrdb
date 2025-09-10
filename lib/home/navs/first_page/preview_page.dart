@@ -19,6 +19,7 @@ import 'package:readmore/readmore.dart';
 import '../../../main.dart';
 import '../../../models/movie_model.dart';
 import '../../../provider/client.dart';
+import '../../../splash.dart';
 
 class MoviePreview extends StatefulWidget {
   final int movieId;
@@ -168,7 +169,8 @@ class _MoviePreviewState extends State<MoviePreview> {
       }
     }
   }
-  
+
+
   @override
   void initState() {
     getMovieDetails();

@@ -16,99 +16,114 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'main.dart';
 import 'constens/keys.dart';
-List<dynamic> all = [];
+
+
 class Splash extends StatefulWidget {
   const Splash({super.key});
 
   @override
   State<Splash> createState() => _SplashState();
 }
-int pageNum = DateTime.now().second;
 
+int pageNum = DateTime.now().second;
 
 class _SplashState extends State<Splash> {
   Future<void> shClear() async {
-    SharedPreferences preferences= await SharedPreferences.getInstance();
+    SharedPreferences preferences = await SharedPreferences.getInstance();
     preferences.clear();
   }
+
   Future<void> getDeviceDetails() async {
     await getMovie();
     final deviceInfo = DeviceInfoPlugin();
-      SharedPreferences preferences = await SharedPreferences.getInstance();
-      final oldSavedDev = preferences.getStringList('phone')??[];
-      final androidInfo = await deviceInfo.androidInfo;
-      bool isAlreadySaved=oldSavedDev.isNotEmpty;
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+    final oldSavedDev = preferences.getStringList('phone') ?? [];
+    final androidInfo = await deviceInfo.androidInfo;
+    bool isAlreadySaved =
+        oldSavedDev.isNotEmpty &&
+        oldSavedDev.length > 3 &&
+        oldSavedDev[3] == androidInfo.id;
 
-      if(isAlreadySaved) {
-        if(mounted) {
-          Provider.of<ClientProvider>(
-            context,
-            listen: false,
-          ).setClientId(androidInfo.id);
-        }
-        await preferences.setStringList('phone', [
-          androidInfo.brand,
-          androidInfo.model,
-          androidInfo.version.release,
-          androidInfo.id
-        ]);
-        if(mounted)Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => MainScreen(),));
-
-      }else{
-        FirebaseFirestore.instance.collection(AppConstants.phone).doc(androidInfo.id.toString())
-            .set({
-          "brand": androidInfo.brand,
-          "model": androidInfo.model,
-          "version": androidInfo.version.release,
-          "id": androidInfo.id,
-        }, SetOptions(merge: true));
-        await preferences.setStringList('phone', [
-          androidInfo.brand,
-          androidInfo.model,
-          androidInfo.version.release,
-          androidInfo.id
-        ]);
-        if(mounted) {
-          Provider.of<ClientProvider>(
+    if (isAlreadySaved) {
+      if (mounted) {
+        Provider.of<ClientProvider>(
           context,
           listen: false,
         ).setClientId(androidInfo.id);
-        }
-        if(mounted) {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => MainScreen(),));
-        }
       }
-
-  }
-  Future<void> getMovie({bool refresh = false}) async {
-
-    Uri url = Uri.parse(
-      'https://api.themoviedb.org/3/movie/popular'
-          '?api_key=${AppConstants.apiKey}'
-          '&sort_by=popularity.desc'
-          '&page=$pageNum',
-    );
-    int attempts = 0;
-
-    while (attempts < 10) {
-      try {
-        final res = await http.get(url);
-          final data = jsonDecode(res.body);
-          setState(() {
-            all.addAll(data['results']);
-          });
-          return;
-      } catch (e) {
-        attempts++;
-        if (attempts < 10) {
-          await Future.delayed(const Duration(seconds: 1));
-        } else {
-          if(!mounted) return;
-        }
+      await preferences.setStringList('phone', [
+        androidInfo.brand,
+        androidInfo.model,
+        androidInfo.version.release,
+        androidInfo.id,
+      ]);
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => MainScreen()),
+        );
+      }
+    } else {
+      FirebaseFirestore.instance
+          .collection(AppConstants.phone)
+          .doc(androidInfo.id.toString())
+          .set({
+            "brand": androidInfo.brand,
+            "model": androidInfo.model,
+            "version": androidInfo.version.release,
+            "id": androidInfo.id,
+            "createdAt": FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+      await preferences.setStringList('phone', [
+        androidInfo.brand,
+        androidInfo.model,
+        androidInfo.version.release,
+        androidInfo.id,
+      ]);
+      if (mounted) {
+        Provider.of<ClientProvider>(
+          context,
+          listen: false,
+        ).setClientId(androidInfo.id);
+      }
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => MainScreen()),
+        );
       }
     }
   }
 
+  Future<void> getMovie() async {
+    Uri url = Uri.parse(
+      'https://api.themoviedb.org/3/movie/popular'
+      '?api_key=${AppConstants.apiKey}'
+      '&sort_by=popularity.desc'
+      '&page=$pageNum',
+    );
+    int attempts = 0;
+
+    while (attempts < 3) {
+      try {
+        final res = await http.get(url);
+        final data = jsonDecode(res.body);
+        setState(() {
+          all.addAll(data['results']);
+        });
+
+        return;
+      } catch (e) {
+        attempts++;
+        if (attempts < 3) {
+          await Future.delayed(Duration(seconds: 1));
+        } else {
+          if (!mounted) return;
+        }
+      }
+    }
+
+  }
 
   @override
   void initState() {
@@ -128,23 +143,28 @@ class _SplashState extends State<Splash> {
             children: [
               SizedBox(),
               Container(
-                width: wt*0.45,
-                height: ht*0.2,
+                width: wt * 0.45,
+                height: ht * 0.2,
                 decoration: BoxDecoration(
                   color: Colors.green.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(wt*0.03),
+                  borderRadius: BorderRadius.circular(wt * 0.03),
                   border: Border.all(
                     color: Colors.green.withOpacity(0.6),
-                    width: 2
-                  )
+                    width: 2,
+                  ),
                 ),
                 child: Center(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      Icon(Amicons.iconly_video,color: Colors.green,size: wt*0.15,),
-                      Text('MRDB',
+                      Icon(
+                        Amicons.iconly_video,
+                        color: Colors.green,
+                        size: wt * 0.15,
+                      ),
+                      Text(
+                        'MRDB',
                         style: TextStyle(
                           fontSize: wt * 0.1,
                           fontWeight: FontWeight.bold,
@@ -155,7 +175,10 @@ class _SplashState extends State<Splash> {
                   ),
                 ),
               ),
-              LoadingAnimationWidget.newtonCradle(color: Colors.green, size: wt*0.25)
+              LoadingAnimationWidget.newtonCradle(
+                color: Colors.green,
+                size: wt * 0.25,
+              ),
             ],
           ),
         ),

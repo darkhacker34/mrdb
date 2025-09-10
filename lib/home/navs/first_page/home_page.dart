@@ -17,8 +17,7 @@ import 'package:mrdb/models/movie_model.dart';
 import 'package:provider/provider.dart';
 import '../../../main.dart';
 import '../../../provider/client.dart';
-import '../../../splash.dart';
-
+import '../../../splash.dart' hide all;
 class MRDb extends StatefulWidget {
   final String lang;
   const MRDb({super.key, this.lang = 'en'});
@@ -30,9 +29,8 @@ class MRDb extends StatefulWidget {
 class _MRDbState extends State<MRDb> {
   bool _showFAB = false;
   int pageNum = DateTime.now().second;
-  bool refresh = false;
-  List likList = [];
   bool lod = false;
+  List likList = [];
   bool bottomLod = false;
   List isLiking = [];
   bool forReFresh = false;
@@ -45,7 +43,8 @@ class _MRDbState extends State<MRDb> {
     bool refresh = false,
     bool loadMore = false,
     bool forRe = false,
-  }) async {
+  })
+  async {
     deviceId = Provider.of<ClientProvider>(context, listen: false).clientId!;
     setState(() {
       if (forRe) {
@@ -183,7 +182,6 @@ class _MRDbState extends State<MRDb> {
         break;
       } catch (e) {
         attempts++;
-        print('dfdik');
         if (attempts < 3) {
           await Future.delayed(const Duration(seconds: 1));
         } else {

@@ -10,7 +10,7 @@ import 'package:mrdb/splash.dart';
 import 'package:provider/provider.dart';
 
 import 'home/navs/first_page/home_page.dart';
-
+List all=[];
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(

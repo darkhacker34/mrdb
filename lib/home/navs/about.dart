@@ -1,8 +1,10 @@
 import 'package:amicons/amicons.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:cupertino_icons/cupertino_icons.dart';
 import 'package:flutter/services.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:mrdb/constens/keys.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../main.dart';
@@ -157,7 +159,7 @@ class _AboutState extends State<About> {
           child: SingleChildScrollView(
             child: isLoding?LoadingAnimationWidget.threeArchedCircle(color: Colors.green, size: wt*0.2):SizedBox(
               width: wt * 1,
-              height: ht * 2.06,
+              height: ht * 2.1,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -483,7 +485,8 @@ class _AboutState extends State<About> {
                                           ),
                                         ),
                                       ),
-                                      SizedBox(height: ht*0.02,)
+                                      SizedBox(height: ht*0.02,),
+
                                     ],
                                   );
                                 },
@@ -493,6 +496,18 @@ class _AboutState extends State<About> {
                       ),
                     ),
                   ),
+                  TextButton(
+                      onPressed: () async {
+                        SharedPreferences pref= await SharedPreferences.getInstance();
+                        pref.clear();
+                        await FirebaseFirestore.instance.collection(AppConstants.phone).doc(device[3]).delete();
+                        Navigator.pop(context);
+                      },
+                      child: Text('Delete Account',style: TextStyle(
+                          color: Colors.red.withOpacity(0.6),
+                        fontWeight: FontWeight.bold
+                      ),)
+                  )
                 ],
               ),
             ),
