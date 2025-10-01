@@ -1,7 +1,6 @@
 import 'package:amicons/amicons.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:cupertino_icons/cupertino_icons.dart';
 import 'package:flutter/services.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:mrdb/constens/keys.dart';
@@ -9,7 +8,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../main.dart';
 import '../../models/credit_model.dart';
-import '../../models/movie_model.dart';
 
 class About extends StatefulWidget {
   const About({super.key});
@@ -19,7 +17,8 @@ class About extends StatefulWidget {
 }
 
 class _AboutState extends State<About> {
-  bool isLoding=true;
+  bool isLoading=true;
+  bool deletingAc=false;
   List device=[];
   List reDirecting=[];
   Future<void> getPhoneDetails() async {
@@ -28,12 +27,12 @@ class _AboutState extends State<About> {
      List<String>? phoneData = preferences.getStringList('phone');
      setState(() {
        device = phoneData??['Unknown', 'Unknown Model', 'Unknown Version', 'Unknown ID'];
-       isLoding=false;
+       isLoading=false;
      });
    }catch(e){
      setState(() {
        device = ['Unknown', 'Unknown Model', 'Unknown Version', 'Unknown ID'];
-       isLoding = false;
+       isLoading = false;
      });
    }
   }
@@ -55,8 +54,24 @@ class _AboutState extends State<About> {
       await launchUrl(ur);
     }
   }
-
-
+  
+  Future<void> deleteAccount() async{
+    setState(() {
+      deletingAc=true;
+    });
+    DocumentReference query=FirebaseFirestore.instance.collection(AppConstants.phone).doc(device[3]);
+    SharedPreferences pref = await SharedPreferences.getInstance();
+    pref.clear();
+    var liked = await query.collection('liked').get();
+    for(var like in liked.docs){
+      await query.collection('liked').doc(like.id).delete();
+    }
+    await query.delete();
+    setState(() {
+      deletingAc=false;
+    });
+    SystemNavigator.pop();
+  }
   @override
   void initState() {
     getPhoneDetails();
@@ -157,7 +172,7 @@ class _AboutState extends State<About> {
         padding: EdgeInsets.all(wt * 0.04),
         child: Center(
           child: SingleChildScrollView(
-            child: isLoding?LoadingAnimationWidget.threeArchedCircle(color: Colors.green, size: wt*0.2):SizedBox(
+            child: isLoading?LoadingAnimationWidget.threeArchedCircle(color: Colors.green, size: wt*0.2):SizedBox(
               width: wt * 1,
               height: ht * 2.1,
               child: Column(
@@ -497,13 +512,59 @@ class _AboutState extends State<About> {
                     ),
                   ),
                   TextButton(
-                      onPressed: () async {
-                        SharedPreferences pref= await SharedPreferences.getInstance();
-                        pref.clear();
-                        await FirebaseFirestore.instance.collection(AppConstants.phone).doc(device[3]).delete();
-                        Navigator.pop(context);
+                      onPressed: () {
+                        showDialog(
+                            context: context,
+                            builder: (context) {
+                              return AlertDialog(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(wt*0.05),
+                                  side: BorderSide(
+                                    color: Colors.white.withOpacity(0.5)
+                                  )
+                                ),
+                                backgroundColor: Colors.black,
+                                title: Text('Delete Account?',style: TextStyle(
+                                  color: Colors.white70
+                                ),),
+                                content: Text(
+                                  'If you delete the account, then your favorites will be cleared.',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontWeight: FontWeight.bold
+                                  ),
+                                ),
+                                actionsAlignment: MainAxisAlignment.spaceBetween,
+                                actionsPadding: EdgeInsets.only(
+                                  right: wt*0.04,
+                                  left: wt*0.04,
+                                  bottom: wt*0.02
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                    },
+                                    child: Text('Cancel',style: TextStyle(
+                                      color: Colors.lightBlueAccent.shade700,
+                                    ),),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      deleteAccount();
+                                    },
+                                    child: Text(
+                                      'Delete',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                        );
                       },
-                      child: Text('Delete Account',style: TextStyle(
+                      child:deletingAc?LoadingAnimationWidget.inkDrop(color: Colors.red, size: wt*0.06) :Text('Delete Account',style: TextStyle(
                           color: Colors.red.withOpacity(0.6),
                         fontWeight: FontWeight.bold
                       ),)

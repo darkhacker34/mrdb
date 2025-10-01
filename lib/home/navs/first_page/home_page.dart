@@ -1,32 +1,29 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:amicons/amicons.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:device_info_plus/device_info_plus.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rating/flutter_rating.dart';
 import 'package:http/http.dart' as http;
 import 'package:loading_animation_widget/loading_animation_widget.dart';
-import 'package:lottie/lottie.dart';
 import 'package:mrdb/home/navs/first_page/preview_page.dart';
 import 'package:mrdb/constens/keys.dart';
 import 'package:mrdb/models/movie_model.dart';
 import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../../main.dart';
 import '../../../provider/client.dart';
-import '../../../splash.dart' hide all;
-class MRDb extends StatefulWidget {
+
+class HomePage extends StatefulWidget {
   final String lang;
-  const MRDb({super.key, this.lang = 'en'});
+  const HomePage({super.key, this.lang = 'en'});
 
   @override
-  State<MRDb> createState() => _MRDbState();
+  State<HomePage> createState() => _HomePageState();
 }
 
-class _MRDbState extends State<MRDb> {
+class _HomePageState extends State<HomePage> {
   bool _showFAB = false;
   int pageNum = DateTime.now().second;
   bool lod = false;
@@ -43,8 +40,7 @@ class _MRDbState extends State<MRDb> {
     bool refresh = false,
     bool loadMore = false,
     bool forRe = false,
-  })
-  async {
+  }) async {
     deviceId = Provider.of<ClientProvider>(context, listen: false).clientId!;
     setState(() {
       if (forRe) {
@@ -328,6 +324,61 @@ class _MRDbState extends State<MRDb> {
                 ),
               ),
             )
+          : lod
+          ? Padding(
+              padding: EdgeInsets.only(right: wt * 0.04, left: wt * 0.04),
+              child: Shimmer(
+                direction: ShimmerDirection.rtl,
+                period: Duration(milliseconds: 700),
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.grey.shade800,
+                    Colors.grey.shade600,
+                    Colors.grey.shade800,
+                  ],
+                  stops: [0.0, 0.5, 1.0],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                child: Column(
+                  children: [
+                    Expanded(
+                      flex: 1,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(wt*0.04)
+                          ),
+                        )
+                    ),
+                    SizedBox(height: ht*0.02,),
+                    Expanded(
+                      flex: 9,
+                      child: GridView.builder(
+                        physics: NeverScrollableScrollPhysics(),
+                        itemCount: 4,
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: ht * 0.02,
+                          crossAxisSpacing: wt * 0.04,
+                          mainAxisExtent: wt * 0.7,
+                        ),
+                        itemBuilder: (context, index) {
+                          return Container(
+                            width: wt * 0.3,
+                            height: ht * 0.2,
+                            decoration: BoxDecoration(
+                              color: Colors.white38,
+                              borderRadius: BorderRadius.circular(wt * 0.04),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
           : Padding(
               padding: EdgeInsets.only(right: wt * 0.04, left: wt * 0.04),
               child: SingleChildScrollView(
@@ -393,52 +444,49 @@ class _MRDbState extends State<MRDb> {
                         child: Stack(
                           children: [
                             RefreshIndicator(
-                              onRefresh: () => getMovie(refresh: true),
-                              child: lod
+                              onRefresh: () async {
+                                await getMovie(refresh: true);
+                                moveTo.jumpTo(0);
+                              },
+                              child: all.isEmpty
                                   ? Center(
-                                      child:
-                                          LoadingAnimationWidget.dotsTriangle(
-                                            color: Colors.green,
-                                            size: wt * 0.1,
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(
+                                          wt * 0.1,
+                                        ),
+                                        onTap: () => getMovie(forRe: true),
+                                        child: Container(
+                                          width: wt * 0.27,
+                                          height: wt * 0.1,
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey.shade700,
+                                            borderRadius: BorderRadius.circular(
+                                              wt * 0.1,
+                                            ),
                                           ),
-                                    )
-                                  :all.isEmpty? Center(
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(
-                                    wt * 0.1,
-                                  ),
-                                  onTap: () => getMovie(forRe: true),
-                                  child: Container(
-                                    width: wt * 0.27,
-                                    height: wt * 0.1,
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade700,
-                                      borderRadius: BorderRadius.circular(
-                                        wt * 0.1,
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceAround,
+                                            children: [
+                                              Icon(
+                                                Amicons
+                                                    .vuesax_refresh_circle_fill,
+                                                size: wt * 0.09,
+                                                color: Colors.white54,
+                                              ),
+                                              Text(
+                                                'Refresh',
+                                                style: TextStyle(
+                                                  color: Colors.white70,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                      MainAxisAlignment.spaceAround,
-                                      children: [
-                                        Icon(
-                                          Amicons
-                                              .vuesax_refresh_circle_fill,
-                                          size: wt * 0.09,
-                                          color: Colors.white54,
-                                        ),
-                                        Text(
-                                          'Refresh',
-                                          style: TextStyle(
-                                            color: Colors.white70,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ):GridView.builder(
+                                    )
+                                  : GridView.builder(
                                       controller: moveTo,
                                       itemCount: all.length,
                                       physics: BouncingScrollPhysics(),

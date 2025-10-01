@@ -23,7 +23,7 @@ class MainScreen extends StatefulWidget {
 }
 
 List pages=[
-  MRDb(),
+  HomePage(),
   Favorite(),
   About()
 ];

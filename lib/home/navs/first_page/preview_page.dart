@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:amicons/amicons.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -16,10 +17,11 @@ import 'package:mrdb/home/navs/about.dart';
 import 'package:pretty_animated_text/pretty_animated_text.dart';
 import 'package:provider/provider.dart';
 import 'package:readmore/readmore.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../../main.dart';
 import '../../../models/movie_model.dart';
 import '../../../provider/client.dart';
-import '../../../splash.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class MoviePreview extends StatefulWidget {
   final int movieId;
@@ -30,15 +32,19 @@ class MoviePreview extends StatefulWidget {
 }
 
 class _MoviePreviewState extends State<MoviePreview> {
-
+  Random random=Random();
   bool islod = false;
+  bool videoLoading = false;
   Map<String, dynamic> movi = {};
   var cast = [];
   var genre = [];
   var actors = [];
+  Map videos = {};
   List favAdding = [];
   List liked = [];
   List reviews = [];
+
+
 
   Future<void> addFav({
     required int movieId,
@@ -46,7 +52,8 @@ class _MoviePreviewState extends State<MoviePreview> {
     required String image,
     required String year,
     required double rating,
-  }) async {
+  })
+  async {
     var deviceId = Provider.of<ClientProvider>(
       context,
       listen: false,
@@ -100,6 +107,7 @@ class _MoviePreviewState extends State<MoviePreview> {
       }
     }
   }
+
   Future<void> getMovieDetails() async {
     Uri? url = Uri.parse(
       'https://api.themoviedb.org/3/movie/${widget.movieId}?api_key=${AppConstants.apiKey}&language=en',
@@ -170,6 +178,47 @@ class _MoviePreviewState extends State<MoviePreview> {
     }
   }
 
+  Future<void> getVideo(BuildContext context) async {
+    print(widget.movieId);
+    Uri uri = Uri.parse('https://api.themoviedb.org/3/movie/${widget.movieId}/videos?api_key=${AppConstants.apiKey}');
+    int attempt = 0;
+
+    while (attempt < 5) {
+      try {
+        http.Response response = await http.get(uri);
+        if (response.statusCode == 200) {
+          var jsonDe = jsonDecode(response.body)['results'] as List;
+          var filtered = jsonDe.where((element) =>
+          element['site'] == 'YouTube' &&
+              (element['type'] == 'Trailer' || element['type'] == 'Teaser')
+          ).toList();
+
+          if (filtered.isNotEmpty) {
+            setState(() {
+              videos = filtered[random.nextInt(filtered.length)];
+            });
+            return;
+          } else {
+            print('No trailer or teaser found');
+            showScaffoldMsg(context, txt: 'No Trailer Available!!');
+            return;
+          }
+        } else {
+          throw Exception('HTTP ${response.statusCode}: ${response.reasonPhrase}');
+        }
+
+      } catch (e) {
+        attempt++;
+        print('Attempt $attempt failed: $e');
+        if (attempt < 5) {
+          await Future.delayed(Duration(seconds: 1));
+        } else {
+          showScaffoldMsg(context, txt: 'Failed to load trailer. Please try again.');
+          return;
+        }
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -179,6 +228,22 @@ class _MoviePreviewState extends State<MoviePreview> {
 
   @override
   Widget build(BuildContext context) {
+
+    String _formatDate(String? dateString) {
+      if (dateString == null) return 'Unknown date';
+
+      try {
+        final DateTime date = DateTime.parse(dateString);
+        final List<String> months = [
+          'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        ];
+
+        return '${months[date.month - 1]} ${date.day}, ${date.year}';
+      } catch (e) {
+        return dateString; // Return original string if parsing fails
+      }
+    }
     String imgUrl(dynamic path) {
       if (path == null || path.isEmpty) {
         return 'https://bioapdps.com.my/malayamedicalcentre/images/no-image/No-Image-Found-400x264.png';
@@ -186,20 +251,137 @@ class _MoviePreviewState extends State<MoviePreview> {
       if (path.startsWith('http')) return path;
       return '${AppConstants.baseImageUrl}$path';
     }
-
     final img = imgUrl(movi['backdrop_path'] ?? movi['poster_path']);
     return SafeArea(
       child: Scaffold(
         backgroundColor: Colors.black,
         body: islod
-            ? Center(
-                child: LoadingAnimationWidget.discreteCircle(
-                  color: Colors.lightGreenAccent,
-                  secondRingColor: Colors.pink,
-                  thirdRingColor: Colors.indigoAccent,
-                  size: wt * 0.15,
+            ? Shimmer(
+          direction: ShimmerDirection.ltr,
+          period: Duration(milliseconds: 1000),
+          gradient: LinearGradient(
+            colors: [
+              Colors.grey.shade800,
+              Colors.grey.shade600,
+              Colors.grey.shade800,
+            ],
+            stops: [0.0, 0.5, 1.0],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                Container(
+                  margin: EdgeInsets.all(wt * 0.05),
+                  width: wt,
+                  height: ht * 0.3,
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(wt * 0.03),
+                  ),
                 ),
-              )
+                Container(
+                  width: wt*0.8,
+                  height: ht * 0.075,
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(wt * 0.05),
+                  ),
+                ),
+                SizedBox(
+                  height: ht * 0.13,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: List.generate(3, (index) => Container(
+                      width: wt * 0.2,
+                      height: ht * 0.08,
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(wt * 0.02),
+                      ),
+                    )),
+                  ),
+                ),
+
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: wt * 0.3,
+                      height: ht * 0.025,
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(wt * 0.01),
+                      ),
+                    ),
+                    SizedBox(height: ht * 0.03),
+                    ...List.generate(4, (index) => Padding(
+                      padding: EdgeInsets.only(bottom: ht * 0.01),
+                      child: Container(
+                        width: index == 3 ? wt * 0.6 : wt * 0.85,
+                        height: ht * 0.02,
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(wt * 0.01),
+                        ),
+                      ),
+                    )),
+                  ],
+                ),
+                Container(
+                  width: wt * 0.15,
+                  height: ht * 0.025,
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(wt * 0.01),
+                  ),
+                ),
+
+                SizedBox(
+                    height: ht * 0.25,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: List.generate(3, (index) {
+                        return SizedBox(
+                          width: wt * 0.3,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              Container(
+                                width: wt * 0.25,
+                                height: wt * 0.25,
+                                decoration: BoxDecoration(
+                                  color: Colors.black54,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              Container(
+                                width: wt * 0.25,
+                                height: ht * 0.02,
+                                decoration: BoxDecoration(
+                                  color: Colors.black54,
+                                  borderRadius: BorderRadius.circular(wt * 0.01),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                Container(
+                  width: wt * 0.9,
+                  height: ht * 0.075,
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(wt * 0.05),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        )
             : CustomScrollView(
                 slivers: [
                   SliverAppBar(
@@ -477,8 +659,171 @@ class _MoviePreviewState extends State<MoviePreview> {
                         padding: EdgeInsets.all(wt * 0.07),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(wt * 0.05),
-                          onTap: () {},
-                          child: Container(
+                          onTap: () async {
+                            setState(() {
+                              videoLoading=true;
+                            });
+                            await getVideo(context);
+                            final YoutubePlayerController ytController = YoutubePlayerController(
+                              initialVideoId: videos['key']??'',
+                              flags: YoutubePlayerFlags(
+                                autoPlay: true,
+                                forceHD: true,
+                                mute: false,
+                              ),
+                            );
+                            setState(() {
+                              videoLoading=false;
+                            });
+
+                            if (videos.isNotEmpty) {
+                              showModalBottomSheet(
+                                context: context,
+                                isDismissible:  false,
+                                isScrollControlled: true,
+                                backgroundColor: Colors.transparent,
+                                builder: (context) {
+                                  return Container(
+                                    margin: EdgeInsets.symmetric(
+                                        horizontal: wt * 0.03,
+                                        vertical: ht * 0.04
+                                    ),
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: ht*0.02,
+                                      horizontal: wt*0.02,
+                                    ),
+                                    width: wt,
+                                    height: ht * 0.5,
+                                    decoration: BoxDecoration(
+                                        color: Colors.black87,
+                                        borderRadius: BorderRadius.circular(wt * 0.03)
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          padding: EdgeInsets.symmetric(
+                                              horizontal: wt * 0.04,
+                                              vertical: ht * 0.015
+                                          ),
+                                          child: Column(
+                                            children: [
+                                              Text(
+                                                movi['title'] ?? 'Movie Title',
+                                                style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: wt * 0.045,
+                                                    fontWeight: FontWeight.bold
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                                textAlign: TextAlign.center,
+                                              ),
+                                              SizedBox(height: ht * 0.005),
+                                              Text(
+                                                _formatDate(videos['published_at']),
+                                                style: TextStyle(
+                                                  color: Colors.grey.shade400,
+                                                  fontSize: wt * 0.035,
+                                                ),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+
+                                        Expanded(
+                                          child: Container(
+                                            width: wt,
+                                            margin: EdgeInsets.symmetric(horizontal: wt * 0.02),
+                                            child: ClipRRect(
+                                              borderRadius: BorderRadius.circular(wt * 0.02),
+                                              child: GestureDetector(
+                                                onDoubleTapDown: (details) {
+                                                  final dx = details.globalPosition.dx;
+                                                  final currentPosition = ytController.value.position;
+
+                                                  if (dx < wt / 2) {
+                                                    final newPosition = currentPosition - Duration(seconds: 10);
+                                                    ytController.seekTo(newPosition >= Duration.zero ? newPosition : Duration.zero);
+                                                  } else {
+                                                    final newPosition = currentPosition + Duration(seconds: 10);
+                                                    final maxDuration = ytController.value.metaData.duration;
+                                                    ytController.seekTo(newPosition <= maxDuration ? newPosition : maxDuration);
+                                                  }
+                                                },
+                                                child: YoutubePlayerBuilder(
+                                                  player: YoutubePlayer(
+                                                    controller: ytController,
+                                                    showVideoProgressIndicator: true,
+                                                    onEnded: (metaData) {
+                                                      Navigator.pop(context);
+                                                    },
+                                                    bottomActions: [
+                                                      CurrentPosition(),
+                                                      ProgressBar(
+                                                        isExpanded: true,
+                                                        colors: ProgressBarColors(
+                                                          bufferedColor: Colors.grey.shade600,
+                                                          playedColor: Colors.red,
+                                                          handleColor: Colors.redAccent,
+                                                          backgroundColor: Colors.grey.shade800,
+                                                        ),
+                                                      ),
+                                                      RemainingDuration(),
+                                                    ],
+                                                    topActions: [
+                                                      SizedBox(width: 8.0),
+                                                      Expanded(
+                                                        child: Text(
+                                                          videos['name'] ?? 'Video Title',
+                                                          style: TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: 14.0,
+                                                          ),
+                                                          overflow: TextOverflow.ellipsis,
+                                                          maxLines: 1,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  builder: (context, player) {
+                                                    return player;
+                                                  },
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(height: ht*0.02,),
+                                        Container(
+                                          width: wt*0.8,
+                                          height: ht*0.06,
+                                          decoration: BoxDecoration(
+                                            color: Colors.black87,
+                                            borderRadius: BorderRadius.circular(wt*0.04),
+                                            border: Border.all(
+                                              color: Colors.teal.withOpacity(0.5)
+                                            )
+                                          ),
+                                          child: IconButton(
+                                            icon: Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Icon(Icons.close, color: Colors.white, size: wt * 0.06),
+                                                SizedBox(width: wt*0.02,),
+                                                Text('Close',style: TextStyle(color: Colors.white,fontWeight: FontWeight.bold,fontSize: wt*0.04),)
+                                              ],
+                                            ),
+                                            onPressed: () => Navigator.pop(context),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              );
+                            }
+                          },
+                          child: videoLoading?Center(child: LoadingAnimationWidget.staggeredDotsWave(color: Colors.green, size: wt*0.1)):Container(
                             width: wt * 0.9,
                             height: ht * 0.075,
                             decoration: BoxDecoration(
@@ -513,7 +858,7 @@ class _MoviePreviewState extends State<MoviePreview> {
                         ),
                       ),
                       SizedBox(
-                        height: ht * 0.1,
+                        height: ht * 0.12,
 
                         child: Center(
                           child: Row(
@@ -886,3 +1231,6 @@ class _MoviePreviewState extends State<MoviePreview> {
     );
   }
 }
+
+
+

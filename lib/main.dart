@@ -1,15 +1,10 @@
+import 'package:device_preview_plus/device_preview_plus.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:mrdb/firebase_options.dart';
-import 'package:mrdb/home/bottom_nav.dart';
-import 'package:mrdb/home/navs/fav.dart';
-import 'package:mrdb/home/navs/first_page/preview_page.dart';
 import 'package:mrdb/provider/client.dart';
 import 'package:mrdb/splash.dart';
 import 'package:provider/provider.dart';
-
-import 'home/navs/first_page/home_page.dart';
 List all=[];
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,14 +13,17 @@ void main() async {
   );
   runApp(ChangeNotifierProvider(
     create: (_) => ClientProvider(),
-      child: Crud()
+      child: DevicePreview(
+        builder: (context) => MRDb(),
+        enabled: false,
+      )
   )
   );
 }
 
 var wt;
 var ht;
-void showScaffoldMsg(context, {required String txt}) {
+void showScaffoldMsg(BuildContext context, {required String txt}) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       duration: Duration(seconds: 1),
@@ -48,8 +46,8 @@ void showScaffoldMsg(context, {required String txt}) {
   );
 }
 
-class Crud extends StatelessWidget {
-  const Crud({super.key});
+class MRDb extends StatelessWidget {
+  const MRDb({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +64,7 @@ class Crud extends StatelessWidget {
             backgroundColor: Colors.transparent,
           ),
           appBarTheme: AppBarTheme(
-            color: Colors.white,
+            backgroundColor: Colors.white,
             surfaceTintColor: Colors.black,
           ),
           scaffoldBackgroundColor: Colors.white,
